@@ -9,7 +9,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsx watch src/index.ts",
+    "dev:worker": "tsx watch src/worker.ts",
     "start": "node dist/index.js",
+    "start:worker": "node dist/worker.js",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -19,9 +21,9 @@
     "@ai-sdk/anthropic": "^2.0.0",
     "@prisma/client": "^6.4.0",
     "ai": "^5.0.0",
+    "bullmq": "^5.12.7",
     "discord.js": "^14.19.2",
     "dotenv": "^16.4.7",
-    "node-cron": "^4.0.5",
     "pino": "^9.6.0",
     "zod": "^3.24.1"
   },

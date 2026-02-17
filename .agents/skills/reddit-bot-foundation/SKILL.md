@@ -20,6 +20,7 @@ description: Use when working in the reddit-bot repository to design or implemen
 - Post using acl's authorized personal Reddit account via OAuth refresh-token flow (not username/password storage).
 - Use one-time local OAuth callback script for initial personal-account connection in MVP.
 - Use accepted + rejected + accepted-performance signals in learning, with a 12-hour incremental review plus weekly deep digest.
+- Run periodic jobs through BullMQ repeatable schedules on Redis, using a dedicated worker process.
 - Discovery currently pulls from subreddit `new` feeds plus global search query terms, then ranks with learning-aware subreddit boosts/penalties.
 - Exclude previously posted Reddit threads from future suggestions.
 - Prefer threads up to 7 days old with minimum quality threshold (`>=10 upvotes OR >=5 comments`).
@@ -37,6 +38,7 @@ description: Use when working in the reddit-bot repository to design or implemen
 - Keep approvals non-expiring unless manually resolved.
 - Use `POSTING` candidate status as an idempotency lock to prevent duplicate posts on concurrent approvals.
 - Keep Railway health endpoints enabled (`/health`, `/ready`) for uptime/readiness checks.
+- Keep app process focused on Discord interaction; run discovery/learning schedules in the worker process.
 - Publish learning updates in the approvals channel (no dedicated thread).
 - Use Vercel AI SDK with Anthropic Sonnet model configured via env (`AI_MODEL`) and default to latest Sonnet.
 - Use `/Users/ayecl/workspace/Company/reddit-bot/docs/about-youanai.md` as canonical brand/context grounding for generated drafts.

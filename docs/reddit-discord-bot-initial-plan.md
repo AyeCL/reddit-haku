@@ -16,7 +16,7 @@ Build an AI-assisted bot named `Haku` that:
 - Model: `claude-sonnet-4-5` (configurable via env)
 - Reddit integration: Reddit OAuth + REST API (read + submit scopes)
 - Data store: PostgreSQL + Prisma
-- Queue/scheduler: Start with app scheduler every 20 min; add BullMQ + Redis when volume grows
+- Queue/scheduler: BullMQ + Redis repeatable jobs (20m discovery, 12h learning, weekly digest)
 
 ### Why This Is The Best Fit
 - Vercel AI SDK is strongest in TypeScript, so we avoid glue code.
@@ -57,7 +57,7 @@ Build an AI-assisted bot named `Haku` that:
 - Run recurring learning jobs:
   - every 12 hours: incremental review and quick ranking/style updates,
   - weekly: deeper review across accepted + rejected + performance trends.
-- Post learning outputs to Discord in the approvals thread so decision context stays centralized.
+- Post learning outputs to Discord in the approvals channel so decision context stays centralized.
 - Feed both 12-hour and weekly learning outputs back into:
   - thread ranking/scoring,
   - dedupe heuristics,
@@ -107,9 +107,9 @@ Build an AI-assisted bot named `Haku` that:
 - Persist posted-thread history and block future re-suggestions of the same thread.
 
 ## Proposed Service Modules
-- `src/scheduler/discovery.job.ts`: interval trigger and orchestration.
-- `src/scheduler/learning-review.job.ts`: runs every 12 hours for incremental learning updates.
-- `src/scheduler/weekly-learning-digest.job.ts`: runs weekly for deeper trend analysis + digest output.
+- `src/queue/scheduler.ts`: repeatable job registration in BullMQ.
+- `src/queue/worker.ts`: queue worker processor and job lifecycle logging.
+- `src/worker.ts`: worker process bootstrap (job execution runtime).
 - `src/reddit/reddit.client.ts`: OAuth token + search + comment API calls.
 - `src/reddit/thread-filter.service.ts`: filtering, dedupe, and ranking.
 - `src/ai/draft.service.ts`: Vercel AI SDK generation and rewrite logic.
@@ -213,7 +213,7 @@ Mention command responses should include:
 4. Add Reddit OAuth client with search + comment methods.
 5. Add generation service using Vercel AI SDK + Sonnet and internal tool-calling.
 6. Add database models for approvals + discovery config + posted/approved memory.
-7. Implement 20-minute discovery scheduler + 12-hour learning review scheduler + weekly digest scheduler.
+7. Implement BullMQ repeatable jobs for 20-minute discovery + 12-hour learning + weekly digest.
 8. Implement posting retry policy (up to 3 retries) with Discord failure notifications.
 9. Implement post-performance snapshot collection for learning feedback.
 10. Implement dry-run end-to-end test.
@@ -233,6 +233,7 @@ Mention command responses should include:
 - Milestone 4 implemented with `@Haku` read/mutate command routing and permission gates.
 - Milestone 5 implemented with 12-hour learning snapshots + weekly digest + performance capture.
 - Milestone 6 implemented with retry/backoff, rate-limit telemetry, posting idempotency locks, and health/readiness endpoints.
+- Scheduling runtime now uses BullMQ worker architecture instead of in-process cron timers.
 
 ## Open Decisions To Confirm
 - None for MVP planning. Remaining items are implementation details and API credentials.
@@ -264,7 +265,7 @@ Mention command responses should include:
 - Seed subreddit validation: normalize/skip invalid subreddit names and continue startup.
 - Learning cadence: run both 12-hour incremental learning and weekly deep digest.
 - Weekly digest scope: include accepted + rejected + performance signals.
-- Learning output location: approvals thread (same thread/channel).
+- Learning output location: approvals channel (single channel).
 - Learning output location: approvals channel (no dedicated thread).
 - Non-approver mentions: read-only config/status only.
 - Reply language: English-only.

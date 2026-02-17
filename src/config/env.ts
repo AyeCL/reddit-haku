@@ -98,6 +98,10 @@ const envSchema = z.object({
   REDIS_URL: z.string().min(1),
   DB_PROVIDER: z.string().default("supabase"),
   MEMORY_RETRIEVAL_MODE: z.string().default("sql"),
+  QUEUE_NAME: z.string().default("haku-jobs"),
+  WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
+  ENABLE_JOB_SCHEDULER: z.string().default("true").transform((v) => v === "true"),
+  RUN_STARTUP_DISCOVERY: z.string().default("true").transform((v) => v === "true"),
 
   DRY_RUN: z.string().default("true").transform((v) => v === "true"),
 

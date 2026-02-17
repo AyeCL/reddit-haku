@@ -32,7 +32,14 @@ export type DiscordBotHandlers = {
   onReaction?: (input: DiscordReactionInput) => Promise<void>;
 };
 
+type DiscordBotOptions = {
+  handlers?: DiscordBotHandlers;
+  listenForEvents?: boolean;
+};
+
 export class DiscordBot {
+  private readonly handlers: DiscordBotHandlers;
+  private readonly listenForEvents: boolean;
   private readonly client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -43,28 +50,33 @@ export class DiscordBot {
     partials: [Partials.Message, Partials.Channel, Partials.Reaction]
   });
 
-  constructor(private readonly handlers: DiscordBotHandlers = {}) {}
+  constructor(options: DiscordBotOptions = {}) {
+    this.handlers = options.handlers ?? {};
+    this.listenForEvents = options.listenForEvents ?? true;
+  }
 
   async start(): Promise<void> {
     this.client.once(Events.ClientReady, (readyClient) => {
       logger.info({ tag: readyClient.user.tag }, "Discord bot connected");
     });
 
-    this.client.on(Events.MessageCreate, async (message) => {
-      try {
-        await this.handleMessage(message);
-      } catch (error) {
-        logger.error({ err: error, messageId: message.id }, "Error handling message event");
-      }
-    });
+    if (this.listenForEvents) {
+      this.client.on(Events.MessageCreate, async (message) => {
+        try {
+          await this.handleMessage(message);
+        } catch (error) {
+          logger.error({ err: error, messageId: message.id }, "Error handling message event");
+        }
+      });
 
-    this.client.on(Events.MessageReactionAdd, async (reaction, user) => {
-      try {
-        await this.handleReactionAdd(reaction, user);
-      } catch (error) {
-        logger.error({ err: error }, "Error handling reaction event");
-      }
-    });
+      this.client.on(Events.MessageReactionAdd, async (reaction, user) => {
+        try {
+          await this.handleReactionAdd(reaction, user);
+        } catch (error) {
+          logger.error({ err: error }, "Error handling reaction event");
+        }
+      });
+    }
 
     await this.client.login(env.DISCORD_BOT_TOKEN);
   }

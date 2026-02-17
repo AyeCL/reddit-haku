@@ -37,6 +37,7 @@ Build Haku: an AI Reddit discovery + Discord approval bot for Youanai that:
 - Learning retention: keep raw history; auto-compaction threshold ~500 posted comments.
 - Language: English-only.
 - Approval expiry: none.
+- Scheduling runtime: BullMQ workers on Redis (no in-process cron).
 
 ## Milestone Tracker
 - [x] M1 Discovery + Discord draft delivery
@@ -58,6 +59,9 @@ Build Haku: an AI Reddit discovery + Discord approval bot for Youanai that:
   - `src/ai/tool-router.service.ts`
   - `src/ai/learning.service.ts`
   - `src/reddit/performance.client.ts`
+  - `src/queue/scheduler.ts`
+  - `src/queue/worker.ts`
+  - `src/worker.ts`
   - `prisma/schema.prisma`
 
 ## Remaining External Setup
@@ -66,9 +70,11 @@ Build Haku: an AI Reddit discovery + Discord approval bot for Youanai that:
    - `npm run prisma:migrate -- --name init`
 3. Run Reddit OAuth bootstrap:
    - `npm run oauth:reddit`
-4. Start app:
+4. Start app process:
    - `npm run dev`
-5. Deploy on Railway with env parity.
+5. Start worker process:
+   - `npm run dev:worker`
+6. Deploy app + worker on Railway with env parity.
 
 ## Reliability Follow-Ups (Post-Launch Tuning)
 - Add explicit dashboards/alerts around existing rate-limit telemetry.
@@ -83,3 +89,5 @@ Build Haku: an AI Reddit discovery + Discord approval bot for Youanai that:
 - 2026-02-17: Added encrypted Reddit token persistence path via OAuth bootstrap script.
 - 2026-02-17: Added this `docs/memory.md` as persistent working notebook.
 - 2026-02-17: Closed reliability milestone with Reddit backoff+rate-limit logging, POSTING idempotency lock, and `/health`/`/ready` endpoints.
+- 2026-02-17: Migrated scheduling from `node-cron` to BullMQ repeatable jobs + dedicated worker process.
+- 2026-02-17: Split runtime responsibilities into app process (`src/index.ts`) and worker process (`src/worker.ts`).

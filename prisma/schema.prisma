@@ -1,0 +1,224 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CandidateStatus {
+  PENDING
+  APPROVED
+  POSTING
+  REJECTED
+  POSTED
+  FAILED
+  CANCELLED
+}
+
+enum DiscoveryMode {
+  FOCUS_ONLY
+  FOCUS_PLUS_SIMILAR
+  BROAD_SUGGEST_ONLY
+}
+
+enum CommandActionType {
+  READ
+  MUTATE
+}
+
+model SubredditConfig {
+  id         String   @id @default(cuid())
+  name       String   @unique
+  isEnabled  Boolean  @default(true)
+  isFocus    Boolean  @default(false)
+  isAllowed  Boolean  @default(false)
+  isBlocked  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model DiscoveryPolicy {
+  id                             String        @id @default(cuid())
+  mode                           DiscoveryMode @default(FOCUS_PLUS_SIMILAR)
+  isPaused                       Boolean       @default(false)
+  similarityStrictness           String        @default("balanced")
+  maxThreadAgeHours              Int           @default(168)
+  minThreadUpvotes               Int           @default(10)
+  minThreadComments              Int           @default(5)
+  qualityOperator                String        @default("OR")
+  createdAt                      DateTime      @default(now())
+  updatedAt                      DateTime      @updatedAt
+}
+
+model ThreadCandidate {
+  id                 String          @id @default(cuid())
+  redditPostId       String
+  subreddit          String
+  title              String
+  permalink          String
+  author             String?
+  score              Int?
+  numComments        Int?
+  similaritySource   String?
+  dedupeHash         String          @unique
+  status             CandidateStatus @default(PENDING)
+  discoveredAt       DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  revisions          DraftRevision[]
+  messageMaps        DiscordMessageMap[]
+  approvalEvents     ApprovalEvent[]
+  postedComments     RedditCommentPost[]
+
+  @@index([redditPostId])
+  @@index([status])
+}
+
+model DraftRevision {
+  id                String    @id @default(cuid())
+  threadCandidateId String
+  revisionNumber    Int
+  draftText         String
+  rationale         String?
+  promptSnapshot    String?
+  createdAt         DateTime  @default(now())
+
+  threadCandidate ThreadCandidate @relation(fields: [threadCandidateId], references: [id], onDelete: Cascade)
+
+  @@unique([threadCandidateId, revisionNumber])
+}
+
+model DiscordMessageMap {
+  id               String   @id @default(cuid())
+  threadCandidateId String
+  revisionId       String?
+  channelId        String
+  messageId        String   @unique
+  createdAt        DateTime @default(now())
+
+  threadCandidate ThreadCandidate @relation(fields: [threadCandidateId], references: [id], onDelete: Cascade)
+}
+
+model ApprovalEvent {
+  id               String   @id @default(cuid())
+  threadCandidateId String
+  discordUserId    String
+  eventType        String
+  eventPayload     String?
+  createdAt        DateTime @default(now())
+
+  threadCandidate ThreadCandidate @relation(fields: [threadCandidateId], references: [id], onDelete: Cascade)
+
+  @@index([threadCandidateId, createdAt])
+}
+
+model RedditCommentPost {
+  id                String   @id @default(cuid())
+  threadCandidateId String
+  redditCommentId   String   @unique
+  redditPermalink   String
+  postedByUsername  String
+  postedAt          DateTime @default(now())
+
+  threadCandidate ThreadCandidate @relation(fields: [threadCandidateId], references: [id], onDelete: Cascade)
+}
+
+model PostedThreadHistory {
+  id            String   @id @default(cuid())
+  redditPostId  String   @unique
+  subreddit     String
+  permalink     String
+  postedAt      DateTime @default(now())
+}
+
+model ApprovedCommentMemory {
+  id                String   @id @default(cuid())
+  threadCandidateId String
+  subreddit         String
+  redditPostId      String
+  approvedComment   String
+  qualityNotes      String?
+  createdAt         DateTime @default(now())
+
+  @@index([subreddit, createdAt])
+}
+
+model RejectedDraftSignal {
+  id                String   @id @default(cuid())
+  threadCandidateId String
+  subreddit         String
+  redditPostId      String
+  rejectedDraft     String
+  rejectionReason   String?
+  createdAt         DateTime @default(now())
+}
+
+model CommentPerformanceSnapshot {
+  id                   String   @id @default(cuid())
+  redditCommentId      String
+  redditPostId         String
+  snapshotWindow       String
+  commentScore         Int?
+  commentReplyCount    Int?
+  postScore            Int?
+  postCommentCount     Int?
+  capturedAt           DateTime @default(now())
+
+  @@index([redditCommentId, snapshotWindow, capturedAt])
+}
+
+model LearningSnapshot {
+  id               String   @id @default(cuid())
+  windowType       String
+  summaryText      String
+  scoringChanges   String?
+  generatedAt      DateTime @default(now())
+}
+
+model WeeklyLearningDigest {
+  id               String   @id @default(cuid())
+  digestText       String
+  generatedAt      DateTime @default(now())
+}
+
+model DiscordContextMessage {
+  id              String   @id @default(cuid())
+  commandEventId  String
+  channelId       String
+  messageId       String
+  authorId        String
+  content         String
+  messageCreatedAt DateTime
+  capturedAt      DateTime @default(now())
+
+  @@index([commandEventId])
+}
+
+model DiscordCommandEvent {
+  id               String            @id @default(cuid())
+  discordUserId    String
+  channelId        String
+  messageId        String
+  commandText      String
+  actionType       CommandActionType
+  resultSummary    String?
+  createdAt        DateTime          @default(now())
+}
+
+model CompactedContextSummary {
+  id               String   @id @default(cuid())
+  summaryText      String
+  sourceRecordCount Int
+  generatedAt      DateTime @default(now())
+}
+
+model RedditAuthCredential {
+  id                String   @id @default(cuid())
+  redditUsername    String   @unique
+  refreshTokenEnc   String
+  scope             String
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
